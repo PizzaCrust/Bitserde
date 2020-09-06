@@ -4,15 +4,24 @@ use bitvec::store::BitStore;
 use serde::Deserializer;
 use serde::de::{Visitor, SeqAccess, DeserializeSeed};
 use crate::*;
+use bitvec::vec::BitVec;
+use std::io::Read;
+use bitvec::field::BitField;
 
-pub struct BitDeserializer<'de, O = Lsb0, T = usize> where O: BitOrder, T: BitStore {
+pub struct BitDeserializer<'de, O = Lsb0, T = usize> where O: BitOrder, T: BitStore, BitSlice<O, T>: BitField {
     bits: &'de BitSlice<O, T>,
 }
 
-impl<'de, O: BitOrder, S: BitStore> BitDeserializer<'de, O, S> {
+impl<'de, O: BitOrder, S: BitStore> BitDeserializer<'de, O, S> where BitSlice<O, S>: BitField {
     fn parse_bit(slice: &'de BitSlice<O, S>) -> Result<(bool, &'de BitSlice<O, S>)> {
         let (bit, rest) = slice.split_at(1);
         Ok((bit[0], rest))
+    }
+    fn parse_byte(slice: &'de BitSlice<O, S>) -> Result<(u8, &'de BitSlice<O, S>)> where BitSlice<O,S>: BitField {
+        let (mut byte_bits, rest) = slice.split_at(8);
+        let mut byte = vec![0u8];
+        byte_bits.read(&mut byte[..]);
+        Ok((byte[0], rest))
     }
     pub fn new(slice: &'de BitSlice<O, S>) -> Self {
         BitDeserializer {
@@ -21,7 +30,7 @@ impl<'de, O: BitOrder, S: BitStore> BitDeserializer<'de, O, S> {
     }
 }
 
-impl<'de, 'a, O: BitOrder, S: BitStore> Deserializer<'de> for &'a mut BitDeserializer<'de, O, S> {
+impl<'de, 'a, O: BitOrder, S: BitStore> Deserializer<'de> for &'a mut BitDeserializer<'de, O, S> where BitSlice<O, S>: BitField {
     type Error = Error;
 
     fn deserialize_any<V>(self, visitor: V) -> Result<<V as Visitor<'de>>::Value> where
@@ -58,7 +67,9 @@ impl<'de, 'a, O: BitOrder, S: BitStore> Deserializer<'de> for &'a mut BitDeseria
 
     fn deserialize_u8<V>(self, visitor: V) -> Result<<V as Visitor<'de>>::Value> where
         V: Visitor<'de> {
-        unimplemented!()
+        let (byte, rest) = BitDeserializer::parse_byte(self.bits)?;
+        self.bits = rest;
+        visitor.visit_u8(byte)
     }
 
     fn deserialize_u16<V>(self, visitor: V) -> Result<<V as Visitor<'de>>::Value> where
@@ -138,11 +149,11 @@ impl<'de, 'a, O: BitOrder, S: BitStore> Deserializer<'de> for &'a mut BitDeseria
 
     fn deserialize_tuple<V>(self, len: usize, visitor: V) -> Result<<V as Visitor<'de>>::Value> where
         V: Visitor<'de> {
-        struct Access<'de, 'a, O: BitOrder, S: BitStore> {
+        struct Access<'de, 'a, O: BitOrder, S: BitStore> where BitSlice<O, S>: BitField {
             deserializer: &'a mut BitDeserializer<'de, O, S>,
             len: usize
         }
-        impl<'de, 'a, O: BitOrder, S: BitStore> SeqAccess<'de> for Access<'de, 'a, O, S> {
+        impl<'de, 'a, O: BitOrder, S: BitStore> SeqAccess<'de> for Access<'de, 'a, O, S> where BitSlice<O, S>: BitField {
             type Error = Error;
 
             fn next_element_seed<T>(&mut self, seed: T) -> Result<Option<<T as DeserializeSeed<'de>>::Value>> where
