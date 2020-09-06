@@ -1,0 +1,11 @@
+[package]
+name = "bitserde"
+version = "0.1.0"
+authors = ["PizzaCrust <pizzacrustcoder@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+serde = { version = "1.0.115", features = ["derive"] }
+bitvec = "0.18.1"
