@@ -151,29 +151,18 @@ impl<'de, 'a, O: BitOrder, S: BitStore> Deserializer<'de> for &'a mut BitDeseria
         V: Visitor<'de> {
         struct Access<'de, 'a, O: BitOrder, S: BitStore> where BitSlice<O, S>: BitField {
             deserializer: &'a mut BitDeserializer<'de, O, S>,
-            len: usize
         }
         impl<'de, 'a, O: BitOrder, S: BitStore> SeqAccess<'de> for Access<'de, 'a, O, S> where BitSlice<O, S>: BitField {
             type Error = Error;
 
             fn next_element_seed<T>(&mut self, seed: T) -> Result<Option<<T as DeserializeSeed<'de>>::Value>> where
                 T: DeserializeSeed<'de> {
-                if self.len > 0 {
-                    self.len -= 1;
-                    let value = serde::de::DeserializeSeed::deserialize(seed, &mut *self.deserializer)?;
-                    Ok(Some(value))
-                } else {
-                    Ok(None)
-                }
-            }
-
-            fn size_hint(&self) -> Option<usize> {
-                Some(self.len)
+                let value = serde::de::DeserializeSeed::deserialize(seed, &mut *self.deserializer)?;
+                Ok(Some(value))
             }
         }
         visitor.visit_seq(Access {
             deserializer: self,
-            len
         })
     }
 
