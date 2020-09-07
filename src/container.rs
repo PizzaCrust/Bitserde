@@ -2,17 +2,17 @@ use bitvec::order::BitOrder;
 use bitvec::store::BitStore;
 use bitvec::vec::BitVec;
 use std::marker::PhantomData;
-use serde::{Deserialize, Deserializer};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde::de::{Visitor, SeqAccess, Error};
 use serde::export::Formatter;
 use std::io::Read;
 use bitvec::slice::BitSlice;
 use bitvec::field::BitField;
+use serde::ser::{Error as SerializeError, SerializeSeq};
 
 /// Represents a bit container size.
 pub trait ContainerSize {
     /// The size of the bit container.
-    #[inline]
     fn size() -> usize;
 }
 
@@ -58,5 +58,16 @@ impl<'de, T: ContainerSize, O: BitOrder, S: BitStore> Deserialize<'de> for BitCo
     fn deserialize<D>(deserializer: D) -> Result<Self, <D as Deserializer<'de>>::Error> where
         D: Deserializer<'de> {
         deserializer.deserialize_tuple_struct("BitContainer", 0, BitContainerVisitor(PhantomData, PhantomData, PhantomData))
+    }
+}
+
+impl<T: ContainerSize, O: BitOrder, X: BitStore> Serialize for BitContainer<T, O, X> {
+    fn serialize<S>(&self, serializer: S) -> Result<<S as Serializer>::Ok, <S as Serializer>::Error> where
+        S: Serializer {
+        let mut seq = serializer.serialize_seq(None)?;
+        for x in &self.0 {
+            seq.serialize_element(x);
+        }
+        seq.end()
     }
 }
