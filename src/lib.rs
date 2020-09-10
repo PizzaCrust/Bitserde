@@ -1,3 +1,5 @@
+#![feature(test)]
+
 use bitvec::field::BitField;
 use bitvec::order::BitOrder;
 use bitvec::slice::BitSlice;
@@ -42,12 +44,15 @@ where
 
 #[cfg(test)]
 mod tests {
+    extern crate test;
+
     use bitvec::order::Lsb0;
     use bitvec::view::BitView;
     use serde::{Deserialize, Serialize};
 
     use crate::{BitContainer, ContainerSize, deserialize, serialize};
     use crate::encoding::EndianEncoding;
+    use test::Bencher;
 
     #[derive(Serialize, Deserialize, PartialEq, Debug)]
     struct BitTest(bool, bool, bool, bool, bool, bool, bool, bool);
@@ -136,5 +141,17 @@ mod tests {
         let test2 =
             deserialize::<TestEnumStruct, _, _, EndianEncoding>(bits.as_bitslice()).unwrap();
         assert_eq!(test, test2);
+    }
+
+    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    struct BooleanTest(Vec<bool>);
+
+    #[bench]
+    fn boolean(b: &mut Bencher) {
+        b.iter(|| {
+            let obj = BooleanTest(vec![true, false]);
+            let bits = serialize::<_, Lsb0, u8, EndianEncoding>(&obj).unwrap();
+            deserialize::<BooleanTest, _, _, EndianEncoding>(bits.as_bitslice()).unwrap();
+        })
     }
 }
