@@ -102,12 +102,18 @@ impl<'de, 'a, O: BitOrder, S: BitStore, E: BinaryEncoding> Deserializer<'de> for
 
     fn deserialize_bytes<V>(self, visitor: V) -> Result<<V as Visitor<'de>>::Value> where
         V: Visitor<'de> {
-        unimplemented!()
+        let len = E::deserialize_len(self)?;
+        let mut bytes = vec![0u8; len];
+        self.bits.read(&mut bytes[..])?;
+        visitor.visit_bytes(&bytes[..])
     }
 
     fn deserialize_byte_buf<V>(self, visitor: V) -> Result<<V as Visitor<'de>>::Value> where
         V: Visitor<'de> {
-        unimplemented!()
+        let len = E::deserialize_len(self)?;
+        let mut bytes = vec![0u8; len];
+        self.bits.read(&mut bytes[..])?;
+        visitor.visit_byte_buf(bytes)
     }
 
     fn deserialize_option<V>(self, visitor: V) -> Result<<V as Visitor<'de>>::Value> where
@@ -117,12 +123,12 @@ impl<'de, 'a, O: BitOrder, S: BitStore, E: BinaryEncoding> Deserializer<'de> for
 
     fn deserialize_unit<V>(self, visitor: V) -> Result<<V as Visitor<'de>>::Value> where
         V: Visitor<'de> {
-        unimplemented!()
+        visitor.visit_unit()
     }
 
     fn deserialize_unit_struct<V>(self, name: &'static str, visitor: V) -> Result<<V as Visitor<'de>>::Value> where
         V: Visitor<'de> {
-        unimplemented!()
+        visitor.visit_unit()
     }
 
     fn deserialize_newtype_struct<V>(self, name: &'static str, visitor: V) -> Result<<V as Visitor<'de>>::Value> where
@@ -178,7 +184,7 @@ impl<'de, 'a, O: BitOrder, S: BitStore, E: BinaryEncoding> Deserializer<'de> for
 
     fn deserialize_struct<V>(self, name: &'static str, fields: &'static [&'static str], visitor: V) -> Result<<V as Visitor<'de>>::Value> where
         V: Visitor<'de> {
-        unimplemented!()
+        self.deserialize_tuple(fields.len(), visitor)
     }
 
     fn deserialize_enum<V>(self, name: &'static str, variants: &'static [&'static str], visitor: V) -> Result<<V as Visitor<'de>>::Value> where

@@ -68,7 +68,9 @@ impl<'a, O: BitOrder + 'static, S: BitStore, E: BinaryEncoding> Serializer for &
     }
 
     fn serialize_bytes(self, v: &[u8]) -> Result<Self::Ok, Self::Error> {
-        unimplemented!()
+        E::serialize_len(self, v.len())?;
+        self.vec.write(v)?;
+        Ok(())
     }
 
     fn serialize_none(self) -> Result<Self::Ok, Self::Error> {
@@ -81,11 +83,11 @@ impl<'a, O: BitOrder + 'static, S: BitStore, E: BinaryEncoding> Serializer for &
     }
 
     fn serialize_unit(self) -> Result<Self::Ok, Self::Error> {
-        unimplemented!()
+        Ok(())
     }
 
     fn serialize_unit_struct(self, name: &'static str) -> Result<Self::Ok, Self::Error> {
-        unimplemented!()
+        Ok(())
     }
 
     fn serialize_unit_variant(self, name: &'static str, variant_index: u32, variant: &'static str) -> Result<Self::Ok, Self::Error> {
