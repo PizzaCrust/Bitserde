@@ -91,4 +91,20 @@ mod tests {
         let obj2 = deserialize::<VectorTest, _, _, EndianEncoding>(bits.as_bitslice()).unwrap();
         assert_eq!(obj, obj2);
     }
+
+    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    enum TestEnum {
+        False(bool), True(u32)
+    }
+
+    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    struct TestEnumStruct(Vec<TestEnum>);
+
+    #[test]
+    fn enum_test() {
+        let test = TestEnumStruct(vec![TestEnum::False(true), TestEnum::True(102040), TestEnum::False(false)]);
+        let bits = serialize::<_, Lsb0, u8, EndianEncoding>(&test).unwrap();
+        let test2 = deserialize::<TestEnumStruct, _, _, EndianEncoding>(bits.as_bitslice()).unwrap();
+        assert_eq!(test, test2);
+    }
 }

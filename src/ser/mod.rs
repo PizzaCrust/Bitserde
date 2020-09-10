@@ -91,7 +91,8 @@ impl<'a, O: BitOrder + 'static, S: BitStore, E: BinaryEncoding> Serializer for &
     }
 
     fn serialize_unit_variant(self, name: &'static str, variant_index: u32, variant: &'static str) -> Result<Self::Ok, Self::Error> {
-        unimplemented!()
+        E::serialize_len(self, variant_index as usize)?;
+        Ok(())
     }
 
     fn serialize_newtype_struct<T: ?Sized>(self, name: &'static str, value: &T) -> Result<Self::Ok, Self::Error> where
@@ -101,7 +102,8 @@ impl<'a, O: BitOrder + 'static, S: BitStore, E: BinaryEncoding> Serializer for &
 
     fn serialize_newtype_variant<T: ?Sized>(self, name: &'static str, variant_index: u32, variant: &'static str, value: &T) -> Result<Self::Ok, Self::Error> where
         T: Serialize {
-        unimplemented!()
+        E::serialize_len(self, variant_index as usize)?;
+        value.serialize(self)
     }
 
     fn serialize_seq(self, len: Option<usize>) -> Result<Self::SerializeSeq, Self::Error> {
@@ -120,7 +122,8 @@ impl<'a, O: BitOrder + 'static, S: BitStore, E: BinaryEncoding> Serializer for &
     }
 
     fn serialize_tuple_variant(self, name: &'static str, variant_index: u32, variant: &'static str, len: usize) -> Result<Self::SerializeTupleVariant, Self::Error> {
-        unimplemented!()
+        E::serialize_len(self, variant_index as usize);
+        Ok(Compound { ser: self })
     }
 
     fn serialize_map(self, len: Option<usize>) -> Result<Self::SerializeMap, Self::Error> {
@@ -132,7 +135,8 @@ impl<'a, O: BitOrder + 'static, S: BitStore, E: BinaryEncoding> Serializer for &
     }
 
     fn serialize_struct_variant(self, name: &'static str, variant_index: u32, variant: &'static str, len: usize) -> Result<Self::SerializeStructVariant, Self::Error> {
-        unimplemented!()
+        E::serialize_len(self, variant_index as usize)?;
+        Ok(Compound { ser: self })
     }
 
     fn collect_str<T: ?Sized>(self, value: &T) -> Result<Self::Ok, Self::Error> where

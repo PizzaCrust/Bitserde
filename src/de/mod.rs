@@ -2,7 +2,7 @@ use bitvec::slice::BitSlice;
 use bitvec::order::{BitOrder, Lsb0};
 use bitvec::store::BitStore;
 use serde::Deserializer;
-use serde::de::{Visitor, SeqAccess, DeserializeSeed};
+use serde::de::{Visitor, SeqAccess, DeserializeSeed, EnumAccess, IntoDeserializer, VariantAccess};
 use crate::*;
 use bitvec::vec::BitVec;
 use std::io::Read;
@@ -189,7 +189,39 @@ impl<'de, 'a, O: BitOrder, S: BitStore, E: BinaryEncoding> Deserializer<'de> for
 
     fn deserialize_enum<V>(self, name: &'static str, variants: &'static [&'static str], visitor: V) -> Result<<V as Visitor<'de>>::Value> where
         V: Visitor<'de> {
-        unimplemented!()
+        impl<'de, 'a, O: BitOrder, S: BitStore, E: BinaryEncoding> serde::de::VariantAccess<'de> for &'a mut BitDeserializer<'de, O, S, E> where BitSlice<O, S>: BitField {
+            type Error = Error;
+
+            fn unit_variant(self) -> Result<()> {
+                Ok(())
+            }
+
+            fn newtype_variant_seed<T>(self, seed: T) -> Result<T::Value> where
+                T: DeserializeSeed<'de> {
+                serde::de::DeserializeSeed::deserialize(seed, self)
+            }
+
+            fn tuple_variant<V>(self, len: usize, visitor: V) -> Result<V::Value> where
+                V: Visitor<'de> {
+                serde::de::Deserializer::deserialize_tuple(self, len, visitor)
+            }
+
+            fn struct_variant<V>(self, fields: &'static [&'static str], visitor: V) -> Result<V::Value> where
+                V: Visitor<'de> {
+                serde::de::Deserializer::deserialize_tuple(self, fields.len(), visitor)
+            }
+        }
+        impl<'de, 'a, O: BitOrder, S: BitStore, E: BinaryEncoding> serde::de::EnumAccess<'de> for &'a mut BitDeserializer<'de, O, S, E> where BitSlice<O, S>: BitField {
+            type Error = Error;
+            type Variant = Self;
+
+            fn variant_seed<V>(self, seed: V) -> Result<(V::Value, Self::Variant)> where V: serde::de::DeserializeSeed<'de> {
+                let index = E::deserialize_len(self)?;
+                let val: Result<_> = seed.deserialize(index.into_deserializer());
+                Ok((val?, self))
+            }
+        }
+        visitor.visit_enum(self)
     }
 
     fn deserialize_identifier<V>(self, visitor: V) -> Result<<V as Visitor<'de>>::Value> where
