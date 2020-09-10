@@ -5,9 +5,8 @@ use bitvec::store::BitStore;
 use bitvec::vec::BitVec;
 use serde::de::{Error, SeqAccess, Visitor};
 use serde::export::Formatter;
-use serde::ser::{Error as SerializeError, SerializeSeq};
+use serde::ser::{SerializeSeq};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use std::io::Read;
 use std::marker::PhantomData;
 
 /// Represents a bit container size.
@@ -91,7 +90,7 @@ impl<T: ContainerSize, O: BitOrder, X: BitStore> Serialize for BitContainer<T, O
     {
         let mut seq = serializer.serialize_seq(None)?;
         for x in &self.0 {
-            seq.serialize_element(x);
+            seq.serialize_element(x)?;
         }
         seq.end()
     }

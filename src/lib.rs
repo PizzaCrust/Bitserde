@@ -34,7 +34,7 @@ where
         vec: BitVec::new(),
         endian: Default::default(),
     };
-    value.serialize(&mut serializer);
+    value.serialize(&mut serializer)?;
     Ok(serializer.vec.clone())
 }
 
@@ -42,8 +42,7 @@ where
 mod tests {
     use crate::encoding::EndianEncoding;
     use crate::{deserialize, serialize, BitContainer, ContainerSize};
-    use bitvec::order::{BitOrder, Lsb0};
-    use bitvec::store::BitStore;
+    use bitvec::order::{Lsb0};
     use bitvec::view::BitView;
     use serde::{Deserialize, Serialize};
 

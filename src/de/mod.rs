@@ -5,9 +5,8 @@ use bitvec::field::BitField;
 use bitvec::order::{BitOrder, Lsb0};
 use bitvec::slice::BitSlice;
 use bitvec::store::BitStore;
-use bitvec::vec::BitVec;
 use paste::paste;
-use serde::de::{DeserializeSeed, EnumAccess, IntoDeserializer, SeqAccess, VariantAccess, Visitor};
+use serde::de::{DeserializeSeed, IntoDeserializer, SeqAccess, Visitor};
 use serde::Deserializer;
 use std::io::Read;
 use std::marker::PhantomData;
@@ -38,7 +37,7 @@ where
     {
         let (mut byte_bits, rest) = slice.split_at(8);
         let mut byte = vec![0u8];
-        byte_bits.read(&mut byte[..]);
+        byte_bits.read(&mut byte[..])?;
         Ok((byte[0], rest))
     }
     pub fn parse_datatype_bytes<T: Sized>(

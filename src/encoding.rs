@@ -9,7 +9,6 @@ use bitvec::store::BitStore;
 use byteorder::{ByteOrder, ReadBytesExt, WriteBytesExt, LE};
 use paste::paste;
 use serde::export::PhantomData;
-use std::io::Write;
 
 macro_rules! create_primitive_encoding {
     ($($type:ty),*) => {
