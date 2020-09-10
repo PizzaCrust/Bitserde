@@ -8,45 +8,47 @@ use std::io::Write;
 use serde::ser::{SerializeStructVariant, SerializeStruct, SerializeMap, SerializeTupleVariant, SerializeTupleStruct, SerializeTuple, SerializeSeq};
 use bitvec::slice::BitSlice;
 use bitvec::field::BitField;
+use crate::encoding::{EndianEncoding, BinaryEncoding};
+use std::marker::PhantomData;
+use bitvec::prelude::BitView;
+use paste::paste;
 
-pub struct BitSerializer<O = Lsb0, T = usize> where O: BitOrder, T: BitStore {
-    pub vec: BitVec<O, T>
+pub struct BitSerializer<O = Lsb0, T = usize, E = EndianEncoding> where O: BitOrder, T: BitStore, E: BinaryEncoding {
+    pub vec: BitVec<O, T>,
+    pub(crate) endian: PhantomData<E>
 }
 
-pub struct Compound<'a, O: BitOrder, S: BitStore> {
-    ser: &'a mut BitSerializer<O, S>
+pub struct Compound<'a, O: BitOrder, S: BitStore, E: BinaryEncoding> {
+    ser: &'a mut BitSerializer<O, S, E>
 }
 
-impl<'a, O: BitOrder, S: BitStore> Serializer for &'a mut BitSerializer<O, S> where BitSlice<O, S::Alias>: BitField {
+macro_rules! impl_encoding_serialization {
+    ($($type:ty),*) => {
+        paste! {
+            $(
+                fn [<serialize_ $type>](self, v: $type) -> Result<Self::Ok, Self::Error> {
+                    self.vec.extend(E::[<serialize_ $type>](v)?.view_bits::<O>().to_bitvec());
+                    Ok(())
+                }
+            )*
+        }
+    };
+}
+
+impl<'a, O: BitOrder + 'static, S: BitStore, E: BinaryEncoding> Serializer for &'a mut BitSerializer<O, S, E> where BitSlice<O, S::Alias>: BitField {
     type Ok = ();
     type Error = Error;
-    type SerializeSeq = Compound<'a, O, S>;
-    type SerializeTuple = Compound<'a, O, S>;
-    type SerializeTupleStruct = Compound<'a, O, S>;
-    type SerializeTupleVariant = Compound<'a, O, S>;
-    type SerializeMap = Compound<'a, O, S>;
-    type SerializeStruct = Compound<'a, O, S>;
-    type SerializeStructVariant = Compound<'a, O, S>;
+    type SerializeSeq = Compound<'a, O, S, E>;
+    type SerializeTuple = Compound<'a, O, S, E>;
+    type SerializeTupleStruct = Compound<'a, O, S, E>;
+    type SerializeTupleVariant = Compound<'a, O, S, E>;
+    type SerializeMap = Compound<'a, O, S, E>;
+    type SerializeStruct = Compound<'a, O, S, E>;
+    type SerializeStructVariant = Compound<'a, O, S, E>;
 
     fn serialize_bool(self, v: bool) -> Result<Self::Ok, Self::Error> {
         self.vec.push(v);
         Ok(())
-    }
-
-    fn serialize_i8(self, v: i8) -> Result<Self::Ok, Self::Error> {
-        unimplemented!()
-    }
-
-    fn serialize_i16(self, v: i16) -> Result<Self::Ok, Self::Error> {
-        unimplemented!()
-    }
-
-    fn serialize_i32(self, v: i32) -> Result<Self::Ok, Self::Error> {
-        unimplemented!()
-    }
-
-    fn serialize_i64(self, v: i64) -> Result<Self::Ok, Self::Error> {
-        unimplemented!()
     }
 
     fn serialize_u8(self, v: u8) -> Result<Self::Ok, Self::Error> {
@@ -54,25 +56,7 @@ impl<'a, O: BitOrder, S: BitStore> Serializer for &'a mut BitSerializer<O, S> wh
         Ok(())
     }
 
-    fn serialize_u16(self, v: u16) -> Result<Self::Ok, Self::Error> {
-        unimplemented!()
-    }
-
-    fn serialize_u32(self, v: u32) -> Result<Self::Ok, Self::Error> {
-        unimplemented!()
-    }
-
-    fn serialize_u64(self, v: u64) -> Result<Self::Ok, Self::Error> {
-        unimplemented!()
-    }
-
-    fn serialize_f32(self, v: f32) -> Result<Self::Ok, Self::Error> {
-        unimplemented!()
-    }
-
-    fn serialize_f64(self, v: f64) -> Result<Self::Ok, Self::Error> {
-        unimplemented!()
-    }
+    impl_encoding_serialization![i8, i16, i32, i64, u16, u32, u64, f32, f64];
 
     fn serialize_char(self, v: char) -> Result<Self::Ok, Self::Error> {
         unimplemented!()
@@ -109,7 +93,7 @@ impl<'a, O: BitOrder, S: BitStore> Serializer for &'a mut BitSerializer<O, S> wh
 
     fn serialize_newtype_struct<T: ?Sized>(self, name: &'static str, value: &T) -> Result<Self::Ok, Self::Error> where
         T: Serialize {
-        unimplemented!()
+        value.serialize(self)
     }
 
     fn serialize_newtype_variant<T: ?Sized>(self, name: &'static str, variant_index: u32, variant: &'static str, value: &T) -> Result<Self::Ok, Self::Error> where
@@ -118,6 +102,9 @@ impl<'a, O: BitOrder, S: BitStore> Serializer for &'a mut BitSerializer<O, S> wh
     }
 
     fn serialize_seq(self, len: Option<usize>) -> Result<Self::SerializeSeq, Self::Error> {
+        if let Some(size) = len {
+            E::serialize_len(self, size)?;
+        }
         Ok(Compound { ser: self })
     }
 
@@ -151,7 +138,7 @@ impl<'a, O: BitOrder, S: BitStore> Serializer for &'a mut BitSerializer<O, S> wh
     }
 }
 
-impl<'a, O: BitOrder, S: BitStore> SerializeStructVariant for Compound<'a, O, S> where BitSlice<O, S::Alias>: BitField  {
+impl<'a, O: BitOrder + 'static, S: BitStore, E: BinaryEncoding> SerializeStructVariant for Compound<'a, O, S, E> where BitSlice<O, S::Alias>: BitField  {
     type Ok = ();
     type Error = Error;
 
@@ -165,7 +152,7 @@ impl<'a, O: BitOrder, S: BitStore> SerializeStructVariant for Compound<'a, O, S>
     }
 }
 
-impl<'a, O: BitOrder, S: BitStore> SerializeStruct for Compound<'a, O, S> where BitSlice<O, S::Alias>: BitField {
+impl<'a, O: BitOrder + 'static, S: BitStore, E: BinaryEncoding> SerializeStruct for Compound<'a, O, S, E> where BitSlice<O, S::Alias>: BitField {
     type Ok = ();
     type Error = Error;
 
@@ -179,7 +166,7 @@ impl<'a, O: BitOrder, S: BitStore> SerializeStruct for Compound<'a, O, S> where 
     }
 }
 
-impl<'a, O: BitOrder, S: BitStore> SerializeMap for Compound<'a, O, S> where BitSlice<O, S::Alias>: BitField {
+impl<'a, O: BitOrder + 'static, S: BitStore, E: BinaryEncoding> SerializeMap for Compound<'a, O, S, E> where BitSlice<O, S::Alias>: BitField {
     type Ok = ();
     type Error = Error;
 
@@ -198,7 +185,7 @@ impl<'a, O: BitOrder, S: BitStore> SerializeMap for Compound<'a, O, S> where Bit
     }
 }
 
-impl<'a, O: BitOrder, S: BitStore> SerializeTupleVariant for Compound<'a, O, S> where BitSlice<O, S::Alias>: BitField {
+impl<'a, O: BitOrder + 'static, S: BitStore, E: BinaryEncoding> SerializeTupleVariant for Compound<'a, O, S, E> where BitSlice<O, S::Alias>: BitField {
     type Ok = ();
     type Error = Error;
 
@@ -212,7 +199,7 @@ impl<'a, O: BitOrder, S: BitStore> SerializeTupleVariant for Compound<'a, O, S> 
     }
 }
 
-impl<'a, O: BitOrder, S: BitStore> SerializeTupleStruct for Compound<'a, O, S> where BitSlice<O, S::Alias>: BitField  {
+impl<'a, O: BitOrder + 'static, S: BitStore, E: BinaryEncoding> SerializeTupleStruct for Compound<'a, O, S, E> where BitSlice<O, S::Alias>: BitField  {
     type Ok = ();
     type Error = Error;
 
@@ -226,7 +213,7 @@ impl<'a, O: BitOrder, S: BitStore> SerializeTupleStruct for Compound<'a, O, S> w
     }
 }
 
-impl<'a, O: BitOrder, S: BitStore> SerializeTuple for Compound<'a, O, S> where BitSlice<O, S::Alias>: BitField {
+impl<'a, O: BitOrder + 'static, S: BitStore, E: BinaryEncoding> SerializeTuple for Compound<'a, O, S, E> where BitSlice<O, S::Alias>: BitField {
     type Ok = ();
     type Error = Error;
 
@@ -240,7 +227,7 @@ impl<'a, O: BitOrder, S: BitStore> SerializeTuple for Compound<'a, O, S> where B
     }
 }
 
-impl<'a, O: BitOrder, S: BitStore> SerializeSeq for Compound<'a, O, S> where BitSlice<O, S::Alias>: BitField {
+impl<'a, O: BitOrder + 'static, S: BitStore, E: BinaryEncoding> SerializeSeq for Compound<'a, O, S, E> where BitSlice<O, S::Alias>: BitField {
     type Ok = ();
     type Error = Error;
 

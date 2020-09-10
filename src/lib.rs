@@ -2,6 +2,7 @@ mod error;
 mod de;
 mod container;
 mod ser;
+mod encoding;
 
 pub use container::{BitContainer,ContainerSize};
 pub use error::{Error, Result};
@@ -11,15 +12,17 @@ use bitvec::slice::BitSlice;
 use serde::{Deserialize, Serialize};
 use bitvec::field::BitField;
 use bitvec::vec::BitVec;
+use crate::encoding::BinaryEncoding;
 
-fn deserialize<'a, T: Deserialize<'a>, O: BitOrder, S: BitStore>(bits: &'a BitSlice<O, S>) -> Result<T> where BitSlice<O, S>: BitField {
-    let mut deserializer = de::BitDeserializer::new(bits);
+fn deserialize<'a, T: Deserialize<'a>, O: BitOrder, S: BitStore, E: BinaryEncoding>(bits: &'a BitSlice<O, S>) -> Result<T> where BitSlice<O, S>: BitField {
+    let mut deserializer = de::BitDeserializer::<'_, O, S, E>::new(bits);
     T::deserialize(&mut deserializer)
 }
 
-fn serialize<T: Serialize, O: BitOrder, S: BitStore>(value: &T) -> Result<BitVec<O, S>> where BitSlice<O, S::Alias>: BitField {
-    let mut serializer = ser::BitSerializer::<O, S> {
-        vec: BitVec::new()
+fn serialize<T: Serialize, O: BitOrder + 'static, S: BitStore, E: BinaryEncoding>(value: &T) -> Result<BitVec<O, S>> where BitSlice<O, S::Alias>: BitField {
+    let mut serializer = ser::BitSerializer::<O, S, E> {
+        vec: BitVec::new(),
+        endian: Default::default()
     };
     value.serialize(&mut serializer);
     Ok(serializer.vec.clone())
@@ -32,6 +35,7 @@ mod tests {
     use bitvec::view::BitView;
     use serde::{Serialize, Deserialize};
     use bitvec::store::BitStore;
+    use crate::encoding::EndianEncoding;
 
     #[derive(Serialize, Deserialize, PartialEq, Debug)]
     struct BitTest(bool, bool, bool, bool, bool, bool, bool, bool);
@@ -39,9 +43,9 @@ mod tests {
     #[test]
     fn bit() {
         let data = vec![0x23u8];
-        let obj = deserialize::<BitTest, _, _>(data.view_bits::<Lsb0>()).unwrap();
+        let obj = deserialize::<BitTest, _, _, EndianEncoding>(data.view_bits::<Lsb0>()).unwrap();
         assert_eq!(obj, BitTest(true, true, false, false, false, true, false, false));
-        assert_eq!(serialize::<_, Lsb0, u8>(&obj).unwrap(), data.view_bits::<Lsb0>().to_bitvec());
+        assert_eq!(serialize::<_, Lsb0, u8, EndianEncoding>(&obj).unwrap(), data.view_bits::<Lsb0>().to_bitvec());
     }
 
     #[derive(Serialize, Deserialize, PartialEq, Debug)]
@@ -50,9 +54,9 @@ mod tests {
     #[test]
     fn bytes() {
         let data = vec![0x01u8, 0x02, 0x03];
-        let obj = deserialize::<ByteTest, _, _>(data.view_bits::<Lsb0>()).unwrap();
+        let obj = deserialize::<ByteTest, _, _, EndianEncoding>(data.view_bits::<Lsb0>()).unwrap();
         assert_eq!(obj, ByteTest(0x01, 0x02, 0x03));
-        assert_eq!(serialize::<_, Lsb0, u8>(&obj).unwrap(), data.view_bits::<Lsb0>().to_bitvec());
+        assert_eq!(serialize::<_, Lsb0, u8, EndianEncoding>(&obj).unwrap(), data.view_bits::<Lsb0>().to_bitvec());
     }
 
     #[derive(Debug, PartialEq)]
@@ -69,10 +73,22 @@ mod tests {
     #[test]
     fn bits() {
         let data = vec![0x23u8, 0x01];
-        let obj = deserialize::<BitsTest, _, _>(data.view_bits::<Lsb0>()).unwrap();
+        let obj = deserialize::<BitsTest, _, _, EndianEncoding>(data.view_bits::<Lsb0>()).unwrap();
         assert_eq!(obj.0.as_byte().unwrap(), 0x23);
         assert_eq!(obj.1, false);
         assert_eq!(obj.2, 0x01);
-        assert_eq!(serialize::<_, Lsb0, u8>(&obj).unwrap(), data.view_bits::<Lsb0>().to_bitvec())
+        assert_eq!(serialize::<_, Lsb0, u8, EndianEncoding>(&obj).unwrap(), data.view_bits::<Lsb0>().to_bitvec())
+    }
+
+    #[derive(Serialize, Deserialize, PartialEq, Debug)]
+    struct VectorTest(f64, Vec<bool>);
+
+    #[test]
+    fn vector_test() {
+        let obj = VectorTest(1.104321, vec![true, true, false, false, true, true]);
+        let bits = serialize::<_, Lsb0, u8, EndianEncoding>(&obj).unwrap();
+        assert_eq!(bits.len(), 102);
+        let obj2 = deserialize::<VectorTest, _, _, EndianEncoding>(bits.as_bitslice()).unwrap();
+        assert_eq!(obj, obj2);
     }
 }
