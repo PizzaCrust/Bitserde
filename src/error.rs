@@ -6,7 +6,8 @@ pub type Result<T> = std::result::Result<T, Error>;
 #[derive(Debug)]
 pub enum Error {
     Message(String),
-    Io(std::io::Error)
+    Io(std::io::Error),
+    Unsupported
 }
 
 impl Display for Error {

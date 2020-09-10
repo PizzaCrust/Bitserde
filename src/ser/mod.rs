@@ -12,6 +12,7 @@ use crate::encoding::{EndianEncoding, BinaryEncoding};
 use std::marker::PhantomData;
 use bitvec::prelude::BitView;
 use paste::paste;
+use crate::error::Error::Unsupported;
 
 pub struct BitSerializer<O = Lsb0, T = usize, E = EndianEncoding> where O: BitOrder, T: BitStore, E: BinaryEncoding {
     pub vec: BitVec<O, T>,
@@ -59,11 +60,11 @@ impl<'a, O: BitOrder + 'static, S: BitStore, E: BinaryEncoding> Serializer for &
     impl_encoding_serialization![i8, i16, i32, i64, u16, u32, u64, f32, f64];
 
     fn serialize_char(self, v: char) -> Result<Self::Ok, Self::Error> {
-        unimplemented!()
+        Err(Unsupported)
     }
 
     fn serialize_str(self, v: &str) -> Result<Self::Ok, Self::Error> {
-        unimplemented!()
+        Err(Unsupported)
     }
 
     fn serialize_bytes(self, v: &[u8]) -> Result<Self::Ok, Self::Error> {
@@ -71,12 +72,12 @@ impl<'a, O: BitOrder + 'static, S: BitStore, E: BinaryEncoding> Serializer for &
     }
 
     fn serialize_none(self) -> Result<Self::Ok, Self::Error> {
-        unimplemented!()
+        Err(Unsupported)
     }
 
     fn serialize_some<T: ?Sized>(self, value: &T) -> Result<Self::Ok, Self::Error> where
         T: Serialize {
-        unimplemented!()
+        Err(Unsupported)
     }
 
     fn serialize_unit(self) -> Result<Self::Ok, Self::Error> {

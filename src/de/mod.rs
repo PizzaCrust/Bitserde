@@ -11,6 +11,7 @@ use std::mem::size_of;
 use crate::encoding::EndianEncoding;
 use std::marker::PhantomData;
 use paste::paste;
+use crate::error::Error::Unsupported;
 
 pub struct BitDeserializer<'de, O = Lsb0, T = usize, E = EndianEncoding> where O: BitOrder, T: BitStore, BitSlice<O, T>: BitField, E: BinaryEncoding {
     pub bits: &'de BitSlice<O, T>,
@@ -65,7 +66,7 @@ impl<'de, 'a, O: BitOrder, S: BitStore, E: BinaryEncoding> Deserializer<'de> for
 
     fn deserialize_any<V>(self, visitor: V) -> Result<<V as Visitor<'de>>::Value> where
         V: Visitor<'de> {
-        unimplemented!()
+        Err(Unsupported)
     }
 
     fn deserialize_bool<V>(self, visitor: V) -> Result<<V as Visitor<'de>>::Value> where
@@ -86,17 +87,17 @@ impl<'de, 'a, O: BitOrder, S: BitStore, E: BinaryEncoding> Deserializer<'de> for
 
     fn deserialize_char<V>(self, visitor: V) -> Result<<V as Visitor<'de>>::Value> where
         V: Visitor<'de> {
-        unimplemented!()
+        Err(Unsupported)
     }
 
     fn deserialize_str<V>(self, visitor: V) -> Result<<V as Visitor<'de>>::Value> where
         V: Visitor<'de> {
-        unimplemented!()
+        Err(Unsupported)
     }
 
     fn deserialize_string<V>(self, visitor: V) -> Result<<V as Visitor<'de>>::Value> where
         V: Visitor<'de> {
-        unimplemented!()
+        Err(Unsupported)
     }
 
     fn deserialize_bytes<V>(self, visitor: V) -> Result<<V as Visitor<'de>>::Value> where
@@ -111,7 +112,7 @@ impl<'de, 'a, O: BitOrder, S: BitStore, E: BinaryEncoding> Deserializer<'de> for
 
     fn deserialize_option<V>(self, visitor: V) -> Result<<V as Visitor<'de>>::Value> where
         V: Visitor<'de> {
-        unimplemented!()
+        Err(Unsupported)
     }
 
     fn deserialize_unit<V>(self, visitor: V) -> Result<<V as Visitor<'de>>::Value> where
@@ -187,11 +188,11 @@ impl<'de, 'a, O: BitOrder, S: BitStore, E: BinaryEncoding> Deserializer<'de> for
 
     fn deserialize_identifier<V>(self, visitor: V) -> Result<<V as Visitor<'de>>::Value> where
         V: Visitor<'de> {
-        unimplemented!()
+        Err(Unsupported)
     }
 
     fn deserialize_ignored_any<V>(self, visitor: V) -> Result<<V as Visitor<'de>>::Value> where
         V: Visitor<'de> {
-        unimplemented!()
+       Err(Unsupported)
     }
 }
