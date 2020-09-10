@@ -1,7 +1,4 @@
-<p align="center">
-    <b>Bitserde</b>
-    <a>Slow bit level serialization</a>
-</p>
+Bit serde
 ==========
 
 Bitserde is a toy project of mine to have a solution similar to bincode, except the inner buffers are compromised of BitVecs and slices. It is very slow, around 4.4x slower then bincode. I haven't measured memory usage, but I presume it will consume more.
