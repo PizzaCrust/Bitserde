@@ -1,13 +1,14 @@
+use std::marker::PhantomData;
+
 use bitvec::field::BitField;
 use bitvec::order::BitOrder;
 use bitvec::slice::BitSlice;
 use bitvec::store::BitStore;
 use bitvec::vec::BitVec;
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde::de::{Error, SeqAccess, Visitor};
 use serde::export::Formatter;
-use serde::ser::{SerializeSeq};
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use std::marker::PhantomData;
+use serde::ser::SerializeSeq;
 
 /// Represents a bit container size.
 pub trait ContainerSize {

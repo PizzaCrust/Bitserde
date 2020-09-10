@@ -1,6 +1,7 @@
-use crate::encoding::{BinaryEncoding, EndianEncoding};
-use crate::error::Error::Unsupported;
-use crate::Error;
+use std::fmt::Display;
+use std::io::Write;
+use std::marker::PhantomData;
+
 use bitvec::field::BitField;
 use bitvec::order::{BitOrder, Lsb0};
 use bitvec::prelude::BitView;
@@ -8,14 +9,15 @@ use bitvec::slice::BitSlice;
 use bitvec::store::BitStore;
 use bitvec::vec::BitVec;
 use paste::paste;
+use serde::{Serialize, Serializer};
 use serde::ser::{
     SerializeMap, SerializeSeq, SerializeStruct, SerializeStructVariant, SerializeTuple,
     SerializeTupleStruct, SerializeTupleVariant,
 };
-use serde::{Serialize, Serializer};
-use std::fmt::Display;
-use std::io::Write;
-use std::marker::PhantomData;
+
+use crate::encoding::{BinaryEncoding, EndianEncoding};
+use crate::Error;
+use crate::error::Error::Unsupported;
 
 pub struct BitSerializer<O = Lsb0, T = usize, E = EndianEncoding>
 where

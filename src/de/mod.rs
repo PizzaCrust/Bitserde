@@ -1,6 +1,7 @@
-use crate::encoding::EndianEncoding;
-use crate::error::Error::Unsupported;
-use crate::*;
+use std::io::Read;
+use std::marker::PhantomData;
+use std::mem::size_of;
+
 use bitvec::field::BitField;
 use bitvec::order::{BitOrder, Lsb0};
 use bitvec::slice::BitSlice;
@@ -8,9 +9,10 @@ use bitvec::store::BitStore;
 use paste::paste;
 use serde::de::{DeserializeSeed, IntoDeserializer, SeqAccess, Visitor};
 use serde::Deserializer;
-use std::io::Read;
-use std::marker::PhantomData;
-use std::mem::size_of;
+
+use crate::*;
+use crate::encoding::EndianEncoding;
+use crate::error::Error::Unsupported;
 
 pub struct BitDeserializer<'de, O = Lsb0, T = usize, E = EndianEncoding>
 where

@@ -1,18 +1,20 @@
-mod container;
-mod de;
-mod encoding;
-mod error;
-mod ser;
-
-use crate::encoding::BinaryEncoding;
 use bitvec::field::BitField;
 use bitvec::order::BitOrder;
 use bitvec::slice::BitSlice;
 use bitvec::store::BitStore;
 use bitvec::vec::BitVec;
+use serde::{Deserialize, Serialize};
+
 pub use container::{BitContainer, ContainerSize};
 pub use error::{Error, Result};
-use serde::{Deserialize, Serialize};
+
+use crate::encoding::BinaryEncoding;
+
+mod container;
+mod de;
+mod encoding;
+mod error;
+mod ser;
 
 fn deserialize<'a, T: Deserialize<'a>, O: BitOrder, S: BitStore, E: BinaryEncoding>(
     bits: &'a BitSlice<O, S>,
@@ -40,11 +42,12 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::encoding::EndianEncoding;
-    use crate::{deserialize, serialize, BitContainer, ContainerSize};
-    use bitvec::order::{Lsb0};
+    use bitvec::order::Lsb0;
     use bitvec::view::BitView;
     use serde::{Deserialize, Serialize};
+
+    use crate::{BitContainer, ContainerSize, deserialize, serialize};
+    use crate::encoding::EndianEncoding;
 
     #[derive(Serialize, Deserialize, PartialEq, Debug)]
     struct BitTest(bool, bool, bool, bool, bool, bool, bool, bool);

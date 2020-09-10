@@ -1,14 +1,15 @@
-use crate::de::BitDeserializer;
-use crate::ser::BitSerializer;
-use crate::Result;
 use bitvec::field::BitField;
 use bitvec::order::BitOrder;
 use bitvec::prelude::BitView;
 use bitvec::slice::BitSlice;
 use bitvec::store::BitStore;
-use byteorder::{ByteOrder, ReadBytesExt, WriteBytesExt, LE};
+use byteorder::{ByteOrder, LE, ReadBytesExt, WriteBytesExt};
 use paste::paste;
 use serde::export::PhantomData;
+
+use crate::de::BitDeserializer;
+use crate::Result;
+use crate::ser::BitSerializer;
 
 macro_rules! create_primitive_encoding {
     ($($type:ty),*) => {
