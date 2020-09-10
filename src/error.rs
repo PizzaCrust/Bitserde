@@ -7,7 +7,7 @@ pub type Result<T> = std::result::Result<T, Error>;
 pub enum Error {
     Message(String),
     Io(std::io::Error),
-    Unsupported
+    Unsupported,
 }
 
 impl Display for Error {
@@ -17,15 +17,19 @@ impl Display for Error {
 }
 
 impl serde::de::Error for Error {
-    fn custom<T>(msg: T) -> Self where
-        T: Display {
+    fn custom<T>(msg: T) -> Self
+    where
+        T: Display,
+    {
         Error::Message(msg.to_string())
     }
 }
 
 impl serde::ser::Error for Error {
-    fn custom<T>(msg: T) -> Self where
-        T: Display {
+    fn custom<T>(msg: T) -> Self
+    where
+        T: Display,
+    {
         Error::Message(msg.to_string())
     }
 }
