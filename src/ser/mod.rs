@@ -4,7 +4,6 @@ use std::marker::PhantomData;
 
 use bitvec::field::BitField;
 use bitvec::order::{BitOrder, Lsb0};
-use bitvec::prelude::BitView;
 use bitvec::slice::BitSlice;
 use bitvec::store::BitStore;
 use bitvec::vec::BitVec;
@@ -37,8 +36,9 @@ macro_rules! impl_encoding_serialization {
     ($($type:ty),*) => {
         paste! {
             $(
+                #[inline]
                 fn [<serialize_ $type>](self, v: $type) -> Result<Self::Ok, Self::Error> {
-                    self.vec.extend(E::[<serialize_ $type>](v)?.view_bits::<O>().to_bitvec());
+                    E::[<serialize_ $type>](&mut self.vec, v)?;
                     Ok(())
                 }
             )*

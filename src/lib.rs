@@ -35,7 +35,7 @@ where
     BitSlice<O, S::Alias>: BitField,
 {
     let mut serializer = ser::BitSerializer::<O, S, E> {
-        vec: BitVec::new(),
+        vec: BitVec::new(), //todo we can reduce allocation costs by pre-allocating with struct bit size ~35 ns
         endian: Default::default(),
     };
     value.serialize(&mut serializer)?;
@@ -151,8 +151,8 @@ mod tests {
     fn boolean(b: &mut Bencher) {
         // 4 ns/iter
         let obj = BooleanTest(vec![true, false]);
-        let bits = serialize::<_, Lsb0, u8, EndianEncoding>(&obj).unwrap();
         b.iter(|| {
+            let bits = serialize::<_, Lsb0, u8, EndianEncoding>(&obj).unwrap();
             deserialize::<BooleanTest, _, _, EndianEncoding>(bits.as_bitslice()).unwrap();
         })
     }

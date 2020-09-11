@@ -115,7 +115,7 @@ where
     {
         let len = E::deserialize_len(self)?;
         let mut bytes = vec![0u8; len];
-        self.read_bits(len * 8 as usize).read(&mut bytes[..]);
+        self.read_bits(len * 8 as usize).read(&mut bytes[..])?;
         visitor.visit_bytes(&bytes[..])
     }
 
@@ -125,7 +125,7 @@ where
     {
         let len = E::deserialize_len(self)?;
         let mut bytes = vec![0u8; len];
-        self.read_bits(len * 8 as usize).read(&mut bytes[..]);
+        self.read_bits(len * 8 as usize).read(&mut bytes[..])?;
         visitor.visit_byte_buf(bytes)
     }
 

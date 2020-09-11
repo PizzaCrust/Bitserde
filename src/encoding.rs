@@ -1,8 +1,8 @@
 use std::mem::size_of;
 
+use bitvec::vec::BitVec;
 use bitvec::field::BitField;
 use bitvec::order::BitOrder;
-use bitvec::prelude::BitView;
 use bitvec::slice::BitSlice;
 use bitvec::store::BitStore;
 use byteorder::{ByteOrder, ReadBytesExt, WriteBytesExt, LE};
@@ -18,7 +18,7 @@ macro_rules! create_primitive_encoding {
         paste! {
             $(
                 fn [<deserialize_ $type>]<O: BitOrder, T: BitStore>(bytes: &BitSlice<O, T>) -> Result<$type> where BitSlice<O, T>: BitField;
-                fn [<serialize_ $type>](value: $type) -> Result<Vec<u8>>;
+                fn [<serialize_ $type>]<O: BitOrder, T: BitStore>(vec: &mut BitVec<O, T>, value: $type) -> Result<()> where BitSlice<O, T::Alias>: BitField;
             )*
         }
     };
@@ -32,10 +32,10 @@ macro_rules! impl_primitive_encoding {
                 fn [<deserialize_ $type>]<O: BitOrder, T: BitStore>(mut bytes: &BitSlice<O, T>) -> Result<$type> where BitSlice<O, T>: BitField, {
                     Ok(bytes.[<read_ $type>]::<$endian>()?)
                 }
-                fn [<serialize_ $type>](value: $type) -> Result<Vec<u8>> {
-                    let mut vec = Vec::with_capacity(std::mem::size_of::<$type>());
+                #[inline]
+                fn [<serialize_ $type>]<O: BitOrder, T: BitStore>(vec: &mut BitVec<O, T>, value: $type) -> Result<()> where BitSlice<O, T::Alias>: BitField {
                     vec.[<write_ $type>]::<$endian>(value)?;
-                    Ok(vec)
+                    Ok(())
                 }
             )*
         }
@@ -81,11 +81,7 @@ impl<E: ByteOrder> BinaryEncoding for EndianEncoding<E> {
     where
         BitSlice<O, S::Alias>: BitField,
     {
-        serializer.vec.extend(
-            Self::serialize_u32(len as u32)?
-                .view_bits::<O>()
-                .to_bitvec(),
-        );
+        Self::serialize_u32(&mut serializer.vec, len as u32)?;
         Ok(())
     }
 
@@ -97,10 +93,10 @@ impl<E: ByteOrder> BinaryEncoding for EndianEncoding<E> {
         Ok(bytes.read_i8()?)
     }
 
-    fn serialize_i8(value: i8) -> Result<Vec<u8>> {
-        let mut vec = Vec::with_capacity(1);
-        vec.as_mut_slice().write_i8(value)?;
-        Ok(vec)
+    #[inline]
+    fn serialize_i8<O: BitOrder, T: BitStore>(vec: &mut BitVec<O,T>, value: i8) -> Result<()> where BitSlice<O, T::Alias>: BitField {
+        vec.write_i8(value)?;
+        Ok(())
     }
 
     impl_primitive_encoding![E; i16, i32, i64, u16, u32, u64, f32, f64];
