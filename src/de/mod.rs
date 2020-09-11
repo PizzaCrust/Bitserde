@@ -24,7 +24,7 @@ where
 {
     pub bits: &'de BitSlice<O, T>,
     endian: PhantomData<E>,
-    offset: usize,
+    pub(crate) offset: usize,
 }
 
 impl<'de, O: BitOrder, S: BitStore, E: BinaryEncoding> BitDeserializer<'de, O, S, E>

@@ -18,17 +18,17 @@ mod encoding;
 mod error;
 mod ser;
 
-fn deserialize<'a, T: Deserialize<'a>, O: BitOrder, S: BitStore, E: BinaryEncoding>(
+pub fn deserialize<'a, T: Deserialize<'a>, O: BitOrder, S: BitStore, E: BinaryEncoding>(
     bits: &'a BitSlice<O, S>,
-) -> Result<T>
+) -> Result<(T, usize)>
 where
     BitSlice<O, S>: BitField,
 {
     let mut deserializer = de::BitDeserializer::<'_, O, S, E>::new(bits);
-    T::deserialize(&mut deserializer)
+    Ok((T::deserialize(&mut deserializer), deserializer.offset))
 }
 
-fn serialize<T: Serialize, O: BitOrder + 'static, S: BitStore, E: BinaryEncoding>(
+pub fn serialize<T: Serialize, O: BitOrder + 'static, S: BitStore, E: BinaryEncoding>(
     value: &T,
 ) -> Result<BitVec<O, S>>
 where
