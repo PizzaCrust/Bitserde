@@ -6,7 +6,7 @@ use bitvec::field::BitField;
 use bitvec::order::{BitOrder, Lsb0};
 use bitvec::slice::BitSlice;
 use bitvec::store::BitStore;
-use byteorder::{ReadBytesExt, LE};
+use byteorder::{ReadBytesExt};
 use paste::paste;
 use serde::de::{DeserializeSeed, IntoDeserializer, SeqAccess, Visitor};
 use serde::Deserializer;
