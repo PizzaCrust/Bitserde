@@ -1,21 +1,23 @@
+use std::mem::size_of;
+
 use bitvec::field::BitField;
 use bitvec::order::BitOrder;
 use bitvec::prelude::BitView;
 use bitvec::slice::BitSlice;
 use bitvec::store::BitStore;
-use byteorder::{ByteOrder, LE, ReadBytesExt, WriteBytesExt};
+use byteorder::{ByteOrder, ReadBytesExt, WriteBytesExt, LE};
 use paste::paste;
 use serde::export::PhantomData;
 
 use crate::de::BitDeserializer;
-use crate::Result;
 use crate::ser::BitSerializer;
+use crate::Result;
 
 macro_rules! create_primitive_encoding {
     ($($type:ty),*) => {
         paste! {
             $(
-                fn [<deserialize_ $type>](bytes: Vec<u8>) -> Result<$type>;
+                fn [<deserialize_ $type>]<O: BitOrder, T: BitStore>(bytes: &BitSlice<O, T>) -> Result<$type> where BitSlice<O, T>: BitField;
                 fn [<serialize_ $type>](value: $type) -> Result<Vec<u8>>;
             )*
         }
@@ -26,8 +28,9 @@ macro_rules! impl_primitive_encoding {
     ($endian:ty; $($type:ty),*) => {
         paste! {
             $(
-                fn [<deserialize_ $type>](bytes: Vec<u8>) -> Result<$type> {
-                    Ok(bytes.as_slice().[<read_ $type>]::<$endian>()?)
+                #[inline]
+                fn [<deserialize_ $type>]<O: BitOrder, T: BitStore>(mut bytes: &BitSlice<O, T>) -> Result<$type> where BitSlice<O, T>: BitField, {
+                    Ok(bytes.[<read_ $type>]::<$endian>()?)
                 }
                 fn [<serialize_ $type>](value: $type) -> Result<Vec<u8>> {
                     let mut vec = Vec::with_capacity(std::mem::size_of::<$type>());
@@ -61,18 +64,16 @@ where
     E: ByteOrder;
 
 impl<E: ByteOrder> BinaryEncoding for EndianEncoding<E> {
+    #[inline]
     fn deserialize_len<O: BitOrder, S: BitStore, EN: BinaryEncoding>(
         deserializer: &mut BitDeserializer<O, S, EN>,
     ) -> Result<usize>
     where
         BitSlice<O, S>: BitField,
     {
-        let (bytes, rest) =
-            BitDeserializer::<O, S, EN>::parse_datatype_bytes::<u32>(deserializer.bits)?;
-        deserializer.bits = rest;
-        Ok(Self::deserialize_u32(bytes)? as usize)
+        Ok(Self::deserialize_u32(deserializer.read_bits(size_of::<u32>() * 8))? as usize)
     }
-
+    #[inline]
     fn serialize_len<O: BitOrder + 'static, S: BitStore, EN: BinaryEncoding>(
         serializer: &mut BitSerializer<O, S, EN>,
         len: usize,
@@ -88,8 +89,12 @@ impl<E: ByteOrder> BinaryEncoding for EndianEncoding<E> {
         Ok(())
     }
 
-    fn deserialize_i8(bytes: Vec<u8>) -> Result<i8> {
-        Ok(bytes.as_slice().read_i8()?)
+    #[inline]
+    fn deserialize_i8<O: BitOrder, T: BitStore>(mut bytes: &BitSlice<O, T>) -> Result<i8>
+    where
+        BitSlice<O, T>: BitField,
+    {
+        Ok(bytes.read_i8()?)
     }
 
     fn serialize_i8(value: i8) -> Result<Vec<u8>> {

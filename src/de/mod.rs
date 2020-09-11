@@ -6,13 +6,14 @@ use bitvec::field::BitField;
 use bitvec::order::{BitOrder, Lsb0};
 use bitvec::slice::BitSlice;
 use bitvec::store::BitStore;
+use byteorder::{ReadBytesExt, LE};
 use paste::paste;
 use serde::de::{DeserializeSeed, IntoDeserializer, SeqAccess, Visitor};
 use serde::Deserializer;
 
-use crate::*;
 use crate::encoding::EndianEncoding;
 use crate::error::Error::Unsupported;
+use crate::*;
 
 pub struct BitDeserializer<'de, O = Lsb0, T = usize, E = EndianEncoding>
 where
@@ -23,44 +24,24 @@ where
 {
     pub bits: &'de BitSlice<O, T>,
     endian: PhantomData<E>,
+    offset: usize,
 }
 
 impl<'de, O: BitOrder, S: BitStore, E: BinaryEncoding> BitDeserializer<'de, O, S, E>
 where
     BitSlice<O, S>: BitField,
 {
-    fn parse_bit(slice: &'de BitSlice<O, S>) -> Result<(bool, &'de BitSlice<O, S>)> {
-        let (bit, rest) = slice.split_at(1);
-        Ok((bit[0], rest))
-    }
-    fn parse_byte(slice: &'de BitSlice<O, S>) -> Result<(u8, &'de BitSlice<O, S>)>
-    where
-        BitSlice<O, S>: BitField,
-    {
-        let (mut byte_bits, rest) = slice.split_at(8);
-        let mut byte = vec![0u8];
-        byte_bits.read(&mut byte[..])?;
-        Ok((byte[0], rest))
-    }
-    pub fn parse_datatype_bytes<T: Sized>(
-        slice: &'de BitSlice<O, S>,
-    ) -> Result<(Vec<u8>, &'de BitSlice<O, S>)>
-    where
-        BitSlice<O, S>: BitField,
-    {
-        let mut bytes = Vec::<u8>::with_capacity(size_of::<T>());
-        let mut rest = slice;
-        for i in 0..size_of::<T>() {
-            let (byte, rem) = Self::parse_byte(rest)?;
-            rest = rem;
-            bytes.push(byte);
-        }
-        Ok((bytes, rest))
+    #[inline]
+    pub(crate) fn read_bits(&mut self, count: usize) -> &BitSlice<O, S> {
+        let slice = &self.bits[self.offset..self.offset + count];
+        self.offset += count;
+        slice
     }
     pub fn new(slice: &'de BitSlice<O, S>) -> Self {
         BitDeserializer {
             bits: slice,
             endian: PhantomData,
+            offset: 0,
         }
     }
 }
@@ -70,9 +51,7 @@ macro_rules! impl_encoding_deserialization {
         paste! {
             $(
                 fn [<deserialize_ $type>]<V>(self, visitor: V) -> Result<<V as Visitor<'de>>::Value> where V: Visitor<'de> {
-                    let (bytes, rest) = BitDeserializer::<O, S, E>::parse_datatype_bytes::<$type>(self.bits)?;
-                    self.bits = rest;
-                    visitor.[<visit_ $type>](E::[<deserialize_ $type>](bytes)?)
+                    visitor.[<visit_ $type>](E::[<deserialize_ $type>](self.read_bits(size_of::<$type>() * 8))?)
                 }
             )*
         }
@@ -97,18 +76,14 @@ where
     where
         V: Visitor<'de>,
     {
-        let (bit, rest) = BitDeserializer::<O, S, E>::parse_bit(self.bits)?;
-        self.bits = rest;
-        visitor.visit_bool(bit)
+        visitor.visit_bool(self.read_bits(1)[0])
     }
 
     fn deserialize_u8<V>(self, visitor: V) -> Result<<V as Visitor<'de>>::Value>
     where
         V: Visitor<'de>,
     {
-        let (byte, rest) = BitDeserializer::<O, S, E>::parse_byte(self.bits)?;
-        self.bits = rest;
-        visitor.visit_u8(byte)
+        visitor.visit_u8(self.read_bits(8).read_u8()?)
     }
 
     impl_encoding_deserialization![i8, i16, i32, i64, u16, u32, u64, f32, f64];
@@ -140,7 +115,7 @@ where
     {
         let len = E::deserialize_len(self)?;
         let mut bytes = vec![0u8; len];
-        self.bits.read(&mut bytes[..])?;
+        self.read_bits(len * 8 as usize).read(&mut bytes[..]);
         visitor.visit_bytes(&bytes[..])
     }
 
@@ -150,7 +125,7 @@ where
     {
         let len = E::deserialize_len(self)?;
         let mut bytes = vec![0u8; len];
-        self.bits.read(&mut bytes[..])?;
+        self.read_bits(len * 8 as usize).read(&mut bytes[..]);
         visitor.visit_byte_buf(bytes)
     }
 

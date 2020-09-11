@@ -9,15 +9,15 @@ use bitvec::slice::BitSlice;
 use bitvec::store::BitStore;
 use bitvec::vec::BitVec;
 use paste::paste;
-use serde::{Serialize, Serializer};
 use serde::ser::{
     SerializeMap, SerializeSeq, SerializeStruct, SerializeStructVariant, SerializeTuple,
     SerializeTupleStruct, SerializeTupleVariant,
 };
+use serde::{Serialize, Serializer};
 
 use crate::encoding::{BinaryEncoding, EndianEncoding};
-use crate::Error;
 use crate::error::Error::Unsupported;
+use crate::Error;
 
 pub struct BitSerializer<O = Lsb0, T = usize, E = EndianEncoding>
 where
