@@ -25,7 +25,7 @@ where
     BitSlice<O, S>: BitField,
 {
     let mut deserializer = de::BitDeserializer::<'_, O, S, E>::new(bits);
-    Ok((T::deserialize(&mut deserializer), deserializer.offset))
+    Ok((T::deserialize(&mut deserializer)?, deserializer.offset))
 }
 
 pub fn serialize<T: Serialize, O: BitOrder + 'static, S: BitStore, E: BinaryEncoding>(
@@ -61,7 +61,7 @@ mod tests {
     #[test]
     fn bit() {
         let data = vec![0x23u8];
-        let obj = deserialize::<BitTest, _, _, EndianEncoding>(data.view_bits::<Lsb0>()).unwrap();
+        let (obj, _) = deserialize::<BitTest, _, _, EndianEncoding>(data.view_bits::<Lsb0>()).unwrap();
         assert_eq!(
             obj,
             BitTest(true, true, false, false, false, true, false, false)
@@ -78,7 +78,7 @@ mod tests {
     #[test]
     fn bytes() {
         let data = vec![0x01u8, 0x02, 0x03];
-        let obj = deserialize::<ByteTest, _, _, EndianEncoding>(data.view_bits::<Lsb0>()).unwrap();
+        let (obj, _) = deserialize::<ByteTest, _, _, EndianEncoding>(data.view_bits::<Lsb0>()).unwrap();
         assert_eq!(obj, ByteTest(0x01, 0x02, 0x03));
         assert_eq!(
             serialize::<_, Lsb0, u8, EndianEncoding>(&obj).unwrap(),
@@ -100,7 +100,7 @@ mod tests {
     #[test]
     fn bits() {
         let data = vec![0x23u8, 0x01];
-        let obj = deserialize::<BitsTest, _, _, EndianEncoding>(data.view_bits::<Lsb0>()).unwrap();
+        let (obj, _) = deserialize::<BitsTest, _, _, EndianEncoding>(data.view_bits::<Lsb0>()).unwrap();
         assert_eq!(obj.0.as_byte().unwrap(), 0x23);
         assert_eq!(obj.1, false);
         assert_eq!(obj.2, 0x01);
@@ -118,7 +118,7 @@ mod tests {
         let obj = VectorTest(1.104321, vec![true, true, false, false, true, true]);
         let bits = serialize::<_, Lsb0, u8, EndianEncoding>(&obj).unwrap();
         assert_eq!(bits.len(), 102);
-        let obj2 = deserialize::<VectorTest, _, _, EndianEncoding>(bits.as_bitslice()).unwrap();
+        let (obj2, _) = deserialize::<VectorTest, _, _, EndianEncoding>(bits.as_bitslice()).unwrap();
         assert_eq!(obj, obj2);
     }
 
@@ -139,7 +139,7 @@ mod tests {
             TestEnum::False(false),
         ]);
         let bits = serialize::<_, Lsb0, u8, EndianEncoding>(&test).unwrap();
-        let test2 =
+        let (test2, _) =
             deserialize::<TestEnumStruct, _, _, EndianEncoding>(bits.as_bitslice()).unwrap();
         assert_eq!(test, test2);
     }
