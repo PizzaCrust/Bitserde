@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 pub use container::{BitContainer, ContainerSize};
 pub use error::{Error, Result};
 
-use crate::encoding::BinaryEncoding;
+pub use crate::encoding::{BinaryEncoding, EndianEncoding};
 
 mod container;
 mod de;
