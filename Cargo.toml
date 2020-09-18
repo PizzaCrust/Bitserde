@@ -3,7 +3,7 @@ name = "bitserde"
 description = "bit serialization and deserialization"
 license = "MIT"
 repository = "https://github.com/PizzaCrust/Bitserde"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["PizzaCrust <pizzacrustcoder@gmail.com>"]
 edition = "2018"
 
